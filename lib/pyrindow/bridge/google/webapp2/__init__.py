@@ -7,15 +7,15 @@ config = {
                     'routes': { 'config': 'mvc:router:routings' },
                 }
             },
-            'rindow.bridge.google.appengine.jinja2.DefaultEnvironment': {
+            'pyrindow.bridge.google.webapp2.jinja2.DefaultEnvironment': {
                 'class': 'jinja2.Environment',
                 'construct_args': {
-                    'loader': { 'ref': 'rindow.bridge.google.appengine.jinja2.DefaultFileSystemLoader' },
+                    'loader': { 'ref': 'pyrindow.bridge.google.webapp2.jinja2.DefaultFileSystemLoader' },
                     'extensions': { 'value': ['jinja2.ext.autoescape'] },
                     'autoescape': { 'value': True }
                 }
             },
-            'rindow.bridge.google.appengine.jinja2.DefaultFileSystemLoader': {
+            'pyrindow.bridge.google.webapp2.jinja2.DefaultFileSystemLoader': {
                 'class': 'jinja2.FileSystemLoader',
                 'construct_args': {
                     'searchpath': { 'config': 'mvc:view:template_paths' }

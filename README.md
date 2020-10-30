@@ -13,4 +13,4 @@ Copy the library and set the path.
 
 Requirements
 ------------
-- Python 2.7
+- Python 3.7

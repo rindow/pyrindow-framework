@@ -21,34 +21,51 @@ class Container(object):
             if self.instanceManager.has(name):
                 return self.instanceManager.get(name)
             if not self.componentManager.has(name):
-                raise Exception('component not found.')
+                raise Exception('component not found.: '+name)
             component = self.componentManager.get(name)
             if component.getFactoryName():
                 instance = self.newInstanceByFactory(component)
             else:
-                classObject = self.getClassObject(component.getClassName())
-                if component.hasConstructArgs():
-                    args = self.buildArgs(component.getConstructArgs())
-                    instance = classObject(**args)
-                else:
-                    instance = classObject()
-            for injectName,injectorArgs in component.getInjectors().iteritems():
+                instance = self.newInstance(component)
+            for injectName,injectorArgs in component.getInjectors().items():
                 args = self.buildArgs(injectorArgs)
                 getattr(instance,injectName)(**args)
-            for injectName,propertyValue in component.getProperties().iteritems():
+            for injectName,propertyValue in component.getProperties().items():
                 value = self.resolvValue(propertyValue,injectName)
                 setattr(instance,injectName,value)
             self.setInstance(name,instance)
             return instance
+    def newInstance(self,component):
+        mode = component.getFactoryMode()
+        if mode==None or mode=='class':
+            classObject = self.getClassObject(component.getClassName())
+            if component.hasConstructArgs():
+                args = self.buildArgs(component.getConstructArgs())
+                instance = classObject(**args)
+            else:
+                instance = classObject()
+        elif mode=='import':
+            instance = self.getClassObject(component.getClassName(),moduleMode=True)
+        elif mode=='from':
+            instance = self.getClassObject(component.getClassName())
+        return instance
     def newInstanceByFactory(self,component):
-        factory = self.getClassObject(component.getFactoryName())
-        args = component.getFactoryArgs()
-        return factory(self,**args)
+        mode = component.getFactoryMode()
+        if mode==None or mode=='function':
+            factory = self.getClassObject(component.getFactoryName())
+            args = component.getFactoryArgs()
+            return factory(self,**args)
+        elif mode=='import':
+            return self.getClassObject(component.getFactoryName(),moduleMode=True)
+        elif mode=='from':
+            return self.getClassObject(component.getFactoryName())
+        else:
+            raise Exception('invalid factory_mode: '+mode)
     def has(self,name):
         return self.componentManager.has(name) or self.componentManager.has(name)
     def buildArgs(self,injectorArgs):
         args = {}
-        for name,propertyValue in injectorArgs.iteritems():
+        for name,propertyValue in injectorArgs.items():
             args[name] = self.resolvValue(propertyValue,name)
         return args
     def resolvValue(self,propertyValue,name):
@@ -70,7 +87,10 @@ class Container(object):
             else:
                 return None
         return config
-    def getClassObject(self,fullClassName):
+    def getClassObject(self,fullClassName,moduleMode=False):
+        if moduleMode:
+            module = import_module(fullClassName)
+            return module
         idx = fullClassName.rfind('.')
         if(idx>0):
             moduleName = fullClassName[0:idx]
@@ -133,6 +153,8 @@ class ComponentDefinition(object):
         return self.config.get('class',self.name)
     def getFactoryName(self):
         return self.config.get('factory')
+    def getFactoryMode(self):
+        return self.config.get('factory_mode')
     def setClassName(self,className):
         self.config['class'] = className
     def getProperties(self):
@@ -228,7 +250,7 @@ def Inject(**params):
             componentManager = GetGlobalComponentManager()
             componentName = method.__module__ + '.' + frame.f_code.co_name
             component = componentManager.get(componentName,True)
-            for argName,argValue in params.iteritems():
+            for argName,argValue in params.items():
                 if method.__name__ == '__init__':
                     component.addConstructorArg(argName,argValue)
                 else:
